@@ -660,7 +660,7 @@ class BaseViewer extends EventEmitter {
      */
     emit(event, data) {
         const { file, viewer } = this.options;
-        //  console.log(`${event}:${JSON.stringify(data)}`);
+        console.log(`${event}:${JSON.stringify(data)}`);
         super.emit(event, data);
         super.emit(VIEWER_EVENT.default, {
             event,
