@@ -364,14 +364,24 @@ class DocBaseViewer extends BaseViewer {
 
         // Don't show preload if there is no preload rep, the 'preload' viewer option isn't set, or the rep isn't ready
         const preloadRep = getRepresentation(file, PRELOAD_REP_NAME);
+
+        const preloadRepPaged = getRepresentation(file, 'png');
         if (!preloadRep || !this.getViewerOption('preload') || RepStatus.getStatus(preloadRep) !== STATUS_SUCCESS) {
             return;
         }
 
         const { url_template: template } = preloadRep.content;
+
+        const { url_template: paged_url_template } = preloadRepPaged.content;
+        const { pages: pageCount = 4 } = preloadRepPaged.metadata || {};
         const preloadUrlWithAuth = this.createContentUrlWithAuthParams(template);
+        const pagedUrlTemplate = paged_url_template.replace(/\{.*\}/, 'asset_url');
+        const pagedPreLoadUrlWithAuth = this.createContentUrlWithAuthParams(pagedUrlTemplate);
         this.startPreloadTimer();
-        this.preloader.showPreload(preloadUrlWithAuth, this.containerEl);
+        this.rootEl.classList.add(CLASS_BOX_PREVIEW_THUMBNAILS_OPEN);
+        this.emit(VIEWER_EVENT.thumbnailsOpen);
+        this.resize();
+        this.preloader.showPreload(preloadUrlWithAuth, this.containerEl, pagedPreLoadUrlWithAuth, pageCount);
     }
 
     /**
@@ -394,8 +404,10 @@ class DocBaseViewer extends BaseViewer {
      */
     load() {
         super.load();
-        this.showPreload();
 
+        this.loadAssets(JS).then(() => {
+            this.showPreload();
+        });
         const template = this.options.representation.content.url_template;
         this.pdfUrl = this.createContentUrlWithAuthParams(template);
 
@@ -730,14 +742,29 @@ class DocBaseViewer extends BaseViewer {
 
         return this.pdfLoadingTask.promise
             .then(doc => {
+                const start = Date.now();
                 this.pdfLinkService.setDocument(doc, pdfUrl);
                 this.pdfViewer.setDocument(doc);
-
                 if (this.shouldThumbnailsBeToggled()) {
                     this.rootEl.classList.add(CLASS_BOX_PREVIEW_THUMBNAILS_OPEN);
                     this.emit(VIEWER_EVENT.thumbnailsOpen);
                     this.resize();
                 }
+
+                const { numPages } = doc;
+
+                const count = numPages > 4 ? 4 : numPages;
+
+                const promises = [];
+                for (let i = 1; i <= count; i++) {
+                    const promise = this.pdfViewer.pdfDocument.getPage(i);
+                    promises.push(promise);
+                }
+                const { preloader } = this;
+                Promise.all(promises).then(data => {
+                    const timeDiff = Date.now() - preloader.loadTime;
+                    console.log(` Time diff ${timeDiff}`);
+                });
             })
             .catch(err => {
                 console.error(err); // eslint-disable-line
@@ -844,7 +871,7 @@ class DocBaseViewer extends BaseViewer {
     resize() {
         if (!this.pdfViewer || !this.somePageRendered) {
             if (this.preloader) {
-                this.preloader.resize();
+                //  this.preloader.resize();
             }
             return;
         }

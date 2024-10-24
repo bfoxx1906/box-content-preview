@@ -767,12 +767,12 @@ class Preview extends EventEmitter {
             }
             /* eslint-enable camelcase */
         } else {
-            throw new PreviewError(
-                ERROR_CODE.BAD_INPUT,
-                __('error_generic'),
-                {},
-                'File is not a well-formed Box File object. See FILE_FIELDS in file.js for a list of required fields.',
-            );
+            // throw new PreviewError(
+            //     ERROR_CODE.BAD_INPUT,
+            //     __('error_generic'),
+            //     {},
+            //     'File is not a well-formed Box File object. See FILE_FIELDS in file.js for a list of required fields.',
+            // );
         }
 
         // Start the preview load and render timers when the user starts to perceive preview's load
@@ -1586,9 +1586,9 @@ class Preview extends EventEmitter {
         sanitizedError.displayMessage = stripAuthFromString(displayMessage);
         sanitizedError.message = stripAuthFromString(message);
 
-        this.emitLogEvent(PREVIEW_ERROR, {
-            error: sanitizedError,
-        });
+        //     this.emitLogEvent(PREVIEW_ERROR, {
+        //         error: sanitizedError,
+        //     });
     }
 
     /**
