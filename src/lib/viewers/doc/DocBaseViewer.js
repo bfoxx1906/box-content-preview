@@ -384,11 +384,11 @@ class DocBaseViewer extends BaseViewer {
 
         const { url_template: template } = preloadRep.content;
 
-        const { url_template: paged_url_template } = preloadRepPaged.content;
+        const { url_template: pagedUrlTemplate } = preloadRepPaged.content;
         const { pages: pageCount = 4 } = preloadRepPaged.metadata || {};
         const preloadUrlWithAuth = this.createContentUrlWithAuthParams(template);
-        const pagedUrlTemplate = paged_url_template.replace(/\{.*\}/, 'asset_url');
-        const pagedPreLoadUrlWithAuth = this.createContentUrlWithAuthParams(pagedUrlTemplate);
+        const newPagedUrlTemplate = pagedUrlTemplate.replace(/\{.*\}/, 'asset_url');
+        const pagedPreLoadUrlWithAuth = this.createContentUrlWithAuthParams(newPagedUrlTemplate);
         this.startPreloadTimer();
         this.rootEl.classList.add(CLASS_BOX_PREVIEW_THUMBNAILS_OPEN);
         this.emit(VIEWER_EVENT.thumbnailsOpen);
@@ -674,6 +674,7 @@ class DocBaseViewer extends BaseViewer {
      */
     emitMetric({ name, data }) {
         super.emitMetric(name, data);
+        console.log(`${name}=>${JSON.stringify(data)}`);
     }
 
     //--------------------------------------------------------------------------
@@ -762,7 +763,6 @@ class DocBaseViewer extends BaseViewer {
 
         return this.pdfLoadingTask.promise
             .then(doc => {
-                const start = Date.now();
                 this.pdfLinkService.setDocument(doc, pdfUrl);
                 this.pdfViewer.setDocument(doc);
                 if (this.shouldThumbnailsBeToggled()) {
@@ -776,14 +776,20 @@ class DocBaseViewer extends BaseViewer {
                 const count = numPages > 4 ? 4 : numPages;
 
                 const promises = [];
-                for (let i = 1; i <= count; i++) {
+                for (let i = 1; i <= count; i += 1) {
                     const promise = this.pdfViewer.pdfDocument.getPage(i);
                     promises.push(promise);
                 }
                 const { preloader } = this;
+
+                // Wait until pdfjs has rendered the number of pages the proloader loaded
                 Promise.all(promises).then(data => {
                     const timeDiff = Date.now() - preloader.loadTime;
                     console.log(` Time diff ${timeDiff}`);
+                    this.emitMetric({
+                        name: 'PRELOAD_DOC_LOAD_TIME_DIFF',
+                        data: { pagesLoaded: count, timeDifference: timeDiff },
+                    });
                 });
             })
             .catch(err => {
