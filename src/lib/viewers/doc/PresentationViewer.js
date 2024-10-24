@@ -237,11 +237,11 @@ class PresentationViewer extends DocBaseViewer {
     pagesinitHandler() {
         // We implement presentation mode by hiding other pages except for the first page
         const pageEls = [].slice.call(this.docEl.querySelectorAll('.pdfViewer .page'), 0);
+        const i = 0;
         pageEls.forEach(pageEl => {
             if (pageEl.getAttribute('data-page-number') === '1') {
                 return;
             }
-
             pageEl.classList.add(CLASS_INVISIBLE);
         });
 

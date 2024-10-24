@@ -58,6 +58,11 @@ class DocPreloader extends EventEmitter {
     /** @property {HTMLElement} - Preload wrapper element */
     wrapperEl;
 
+    /** @property {Object} - Preloaded image dimensions */
+    imageDimensions;
+
+    loadTime;
+
     /**
      * [constructor]
      *
@@ -73,6 +78,37 @@ class DocPreloader extends EventEmitter {
         this.wrapperClassName = CLASS_BOX_PREVIEW_PRELOAD_WRAPPER_DOCUMENT;
     }
 
+    buildPreloaderImagePlaceHolder(image) {
+        const placeHolder = document.createElement('div');
+        placeHolder.classList.add(CLASS_BOX_PREVIEW_PRELOAD_PLACEHOLDER);
+        placeHolder.appendChild(image);
+
+        return placeHolder;
+    }
+
+    async waitForImageDimensions() {
+        await new Promise((resolve, reject) => {
+            const checkCondition = () => {
+                if (this.imageDimensions) {
+                    resolve();
+                } else {
+                    setTimeout(checkCondition, 100);
+                }
+            };
+
+            checkCondition();
+        });
+    }
+
+    async loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
+    }
+
     /**
      * Shows a preload of the document by showing the first page as an image. This should be called
      * while the full document loads to give the user visual feedback on the file as soon as possible.
@@ -80,37 +116,57 @@ class DocPreloader extends EventEmitter {
      * @param {string} preloadUrlWithAuth - URL for preload content with authorization query params
      * @return {Promise} Promise to show preload
      */
-    showPreload(preloadUrlWithAuth, containerEl) {
+    async showPreload(preloadUrlWithAuth, containerEl, pagedPreLoadUrlWithAuth, pages = 4) {
         this.containerEl = containerEl;
 
         // Need to load image as a blob to read EXIF
+        this.wrapperEl = document.createElement('div');
+        this.wrapperEl.className = this.wrapperClassName;
+        this.wrapperEl.classList.add('bp-preloader-loaded');
+        this.containerEl.appendChild(this.wrapperEl);
 
-        return this.api
-            .get(preloadUrlWithAuth, { type: 'blob' })
-            .then(handleRepresentationBlobFetch)
-            .then(imgBlob => {
-                if (this.checkDocumentLoaded()) {
-                    return;
-                }
+        const promise1 = this.api.get(preloadUrlWithAuth, { type: 'blob' });
 
-                this.srcUrl = URL.createObjectURL(imgBlob);
+        const promises = [promise1];
 
-                this.wrapperEl = document.createElement('div');
-                this.wrapperEl.className = this.wrapperClassName;
-                this.wrapperEl.innerHTML = `
-                <div class="${CLASS_BOX_PREVIEW_PRELOAD} ${CLASS_INVISIBLE}">
-                    <div class="${CLASS_BOX_PREVIEW_PRELOAD_PLACEHOLDER}">
-                        <img class="${CLASS_BOX_PREVIEW_PRELOAD_CONTENT}" src="${this.srcUrl}" />
-                        <div class="${CLASS_BOX_PREVIEW_PRELOAD_OVERLAY}"></div>
-                    </div>
-                </div>
-            `.trim();
+        const count = pages > 4 ? 4 : pages;
 
-                this.containerEl.appendChild(this.wrapperEl);
-                this.placeholderEl = this.wrapperEl.querySelector(`.${CLASS_BOX_PREVIEW_PRELOAD_PLACEHOLDER}`);
-                this.preloadEl = this.wrapperEl.querySelector(`.${CLASS_BOX_PREVIEW_PRELOAD}`);
-                this.imageEl = this.preloadEl.querySelector(`.${CLASS_BOX_PREVIEW_PRELOAD_CONTENT}`);
-                this.bindDOMListeners();
+        for (let i = 2; i <= count; i++) {
+            const url = pagedPreLoadUrlWithAuth.replace('asset_url', `${i}.png`);
+            const promise = this.api.get(url, { type: 'blob' });
+            promises.push(promise.catch(e => e));
+        }
+
+        this.preloadEl = document.createElement('div');
+        this.preloadEl.classList.add(CLASS_BOX_PREVIEW_PRELOAD);
+        Promise.all(promises)
+            .then(responses => {
+                const results = responses.map(response => handleRepresentationBlobFetch(response)); // Assuming the responses are JSON
+                return Promise.all(results); // Parse all JSON responses
+            })
+            .then(async data => {
+                this.wrapperEl.appendChild(this.preloadEl);
+                const i = 0;
+                const first = data.shift();
+                let img = await this.loadImage(URL.createObjectURL(first));
+                let container = this.buildPreloaderImagePlaceHolder(img);
+                await this.imageLoadHandler(img, container);
+                container = this.buildPreloaderImagePlaceHolder(img);
+                container.setAttribute('num', i);
+                container.classList.add('loaded');
+                this.preloadEl.appendChild(container);
+                data.forEach(element => {
+                    if (!(element instanceof Error)) {
+                        img = document.createElement('img');
+                        img.src = URL.createObjectURL(element);
+                        container = this.buildPreloaderImagePlaceHolder(img);
+                        container.setAttribute('num', i);
+                        container.classList.add('loaded');
+                        this.preloadEl.appendChild(container);
+                    }
+                });
+                this.loadTime = Date.now();
+                console.log(`preload complete  ${Date.now()}`);
             });
     }
 
@@ -146,6 +202,24 @@ class DocPreloader extends EventEmitter {
     }
 
     /**
+     * Set scaled dimensions for the preload image and show.
+     *
+     * @param {number} scaledWidth - Width in pixels to scale preload to
+     * @param {number} scaledHeight - Height in pixels to scale preload to
+     * @param {number} numPages - Number of pages to show for preload
+     * @return {void}
+     */
+    newScaleAndShowPreload(scaledWidth, scaledHeight, numPages, imageEl) {
+        if (this.checkDocumentLoaded()) {
+            return;
+        }
+
+        const element = imageEl.getParentElement;
+        // Set initial placeholder dimensions
+        setDimensions(element, scaledWidth, scaledHeight);
+    }
+
+    /**
      * Hides the preload if it exists.
      *
      * @return {void}
@@ -175,7 +249,7 @@ class DocPreloader extends EventEmitter {
      */
     cleanupPreload = () => {
         if (this.wrapperEl) {
-            this.wrapperEl.parentNode.removeChild(this.wrapperEl);
+            this.wrapperEl.style.zIndex = '-11111111';
             this.wrapperEl = undefined;
         }
 
@@ -194,7 +268,7 @@ class DocPreloader extends EventEmitter {
      * @return {void}
      */
     bindDOMListeners() {
-        this.imageEl.addEventListener('load', this.loadHandler);
+        // this.imageEl.addEventListener('load', this.loadHandler);
     }
 
     /**
@@ -204,7 +278,7 @@ class DocPreloader extends EventEmitter {
      * @return {void}
      */
     unbindDOMListeners() {
-        this.imageEl.removeEventListener('load', this.loadHandler);
+        // this.imageEl.removeEventListener('load', this.loadHandler);
     }
 
     /**
@@ -220,6 +294,38 @@ class DocPreloader extends EventEmitter {
             docEl.scrollTop = scrollTop;
         }
     }
+
+    /**
+     * Finish preloading by properly scaling preload image to be as close as possible to the
+     * true size of the pdf.js document, showing the preload, and hiding the loading indicator.
+     *
+     * @private
+     * @return {Promise} Promise to scale and show preload
+     */
+    imageLoadHandler = (imageEl, container) => {
+        if (!container || !imageEl) {
+            return Promise.resolve();
+        }
+
+        // Calculate pdf width, height, and number of pages from EXIF if possible
+        return this.readEXIF(imageEl)
+            .then(pdfData => {
+                this.pdfData = pdfData;
+                const { scaledWidth, scaledHeight } = this.getScaledWidthAndHeight(pdfData);
+                setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
+                this.imageDimensions = { width: scaledWidth, height: scaledHeight };
+                imageEl.classList.add('loaded');
+                this.numPages = pdfData.numPages;
+                // Otherwise, use the preload image's natural dimensions as a base to scale from
+            })
+            .catch(() => {
+                const { naturalWidth: pdfWidth, naturalHeight: pdfHeight } = imageEl;
+                const { scaledWidth, scaledHeight } = this.getScaledDimensions(pdfWidth, pdfHeight);
+                setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
+                this.imageDimensions = { width: scaledWidth, height: scaledHeight };
+                imageEl.classList.add('loaded');
+            });
+    };
 
     /**
      * Finish preloading by properly scaling preload image to be as close as possible to the

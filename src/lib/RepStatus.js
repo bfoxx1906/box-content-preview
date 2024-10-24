@@ -132,7 +132,7 @@ class RepStatus extends EventEmitter {
                         errorMessage = __('error_try_again_later');
                         break;
                     case ERROR_CODE.CONVERSION_UNSUPPORTED_FORMAT:
-                        errorMessage = __('error_bad_file');
+                        errorMessage = __('error_try_again_later');
                         break;
                     case ERROR_CODE.CONVERSION_LARGE_SIZE_FILE:
                         errorMessage = __('error_large_file');
