@@ -107,6 +107,8 @@ class DocBaseViewer extends BaseViewer {
     /** @property {PageTracker} - PageTracker instance */
     pageTracker;
 
+    doc;
+
     /**
      * @inheritdoc
      */
@@ -365,12 +367,7 @@ class DocBaseViewer extends BaseViewer {
 
         // Don't show preload if there's a cached page or startAt is set and > 1 since preloads are only for the 1st page
         // Also don't show preloads for watermarked files
-        if (
-            !this.preloader ||
-            isWatermarked ||
-            (this.startPageNum && this.startPageNum !== 1) ||
-            this.getCachedPage() !== 1
-        ) {
+        if (!this.preloader || isWatermarked || (this.startPageNum && this.startPageNum !== 1)) {
             return;
         }
 
@@ -384,16 +381,22 @@ class DocBaseViewer extends BaseViewer {
 
         const { url_template: template } = preloadRep.content;
 
-        const { url_template: pagedUrlTemplate } = preloadRepPaged.content;
-        const { pages: pageCount = 4 } = preloadRepPaged.metadata || {};
+        const pagedUrlTemplate = preloadRepPaged?.content?.url_template;
+        const { pages: pageCount = 4 } = preloadRepPaged?.metadata || {};
         const preloadUrlWithAuth = this.createContentUrlWithAuthParams(template);
-        const newPagedUrlTemplate = pagedUrlTemplate.replace(/\{.*\}/, 'asset_url');
+        const newPagedUrlTemplate = pagedUrlTemplate?.replace(/\{.*\}/, 'asset_url');
         const pagedPreLoadUrlWithAuth = this.createContentUrlWithAuthParams(newPagedUrlTemplate);
         this.startPreloadTimer();
         this.rootEl.classList.add(CLASS_BOX_PREVIEW_THUMBNAILS_OPEN);
         this.emit(VIEWER_EVENT.thumbnailsOpen);
         this.resize();
-        this.preloader.showPreload(preloadUrlWithAuth, this.containerEl, pagedPreLoadUrlWithAuth, pageCount);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const turnoff = urlParams.get('turnoff');
+
+        if (!turnoff) {
+            this.preloader.showPreload(preloadUrlWithAuth, this.containerEl, pagedPreLoadUrlWithAuth, pageCount, this);
+        }
     }
 
     /**
@@ -674,7 +677,7 @@ class DocBaseViewer extends BaseViewer {
      */
     emitMetric({ name, data }) {
         super.emitMetric(name, data);
-        console.log(`${name}=>${JSON.stringify(data)}`);
+        console.log(`showing metrics ${name}=>${JSON.stringify(data)}`);
     }
 
     //--------------------------------------------------------------------------
@@ -770,27 +773,28 @@ class DocBaseViewer extends BaseViewer {
                     this.emit(VIEWER_EVENT.thumbnailsOpen);
                     this.resize();
                 }
-
+                this.doc = doc;
                 const { numPages } = doc;
 
-                const count = numPages > 4 ? 4 : numPages;
+                // const count = numPages > 4 ? 4 : numPages;
 
-                const promises = [];
-                for (let i = 1; i <= count; i += 1) {
-                    const promise = this.pdfViewer.pdfDocument.getPage(i);
-                    promises.push(promise);
-                }
-                const { preloader } = this;
+                // const promises = [];
+                // for (let i = 1; i <= count; i += 1) {
+                //     const promise = this.pdfViewer.pdfDocument.getPage(i);
+                //     promises.push(promise);
+                // }
+                // const { preloader } = this;
 
-                // Wait until pdfjs has rendered the number of pages the proloader loaded
-                Promise.all(promises).then(data => {
-                    const timeDiff = Date.now() - preloader.loadTime;
-                    console.log(` Time diff ${timeDiff}`);
-                    this.emitMetric({
-                        name: 'PRELOAD_DOC_LOAD_TIME_DIFF',
-                        data: { pagesLoaded: count, timeDifference: timeDiff },
-                    });
-                });
+                // // Wait until pdfjs has rendered the number of pages the proloader loaded
+                // Promise.all(promises).then(data => {
+                //     const timeDiff = Date.now() - preloader.loadTime;
+                //     console.log(` Time diff ${timeDiff}`);
+                //     window.alert(`Time diff: ${timeDiff/1000} seconds`)
+                //     this.emitMetric({
+                //         name: 'PRELOAD_DOC_LOAD_TIME_DIFF',
+                //         data: { pagesLoaded: count, timeDifference: timeDiff },
+                //     });
+                // });
             })
             .catch(err => {
                 console.error(err); // eslint-disable-line
@@ -1268,9 +1272,16 @@ class DocBaseViewer extends BaseViewer {
      * @return {void}
      */
     initThumbnails() {
-        this.thumbnailsSidebar = new ThumbnailsSidebar(this.thumbnailsSidebarEl, this.pdfViewer);
+        // if (!this.thumbnailsSidebar) {
+        //     this.thumbnailsSidebar = new ThumbnailsSidebar(this.thumbnailsSidebarEl, this.pdfViewer, this.preloader);
+        // } else {
+        //     this.thumbnailsSidebar.pdfViewer = this.pdfViewer;
+        // }
+
+        this.thumbnailsSidebar = new ThumbnailsSidebar(this.thumbnailsSidebarEl, this.pdfViewer, this.preloader);
+
         this.thumbnailsSidebar.init({
-            currentPage: this.pdfViewer.currentPageNumber,
+            currentPage: this.pdfViewer?.currentPageNumber,
             isOpen: this.shouldThumbnailsBeToggled(),
             onSelect: this.onThumbnailSelectHandler,
         });
@@ -1319,6 +1330,22 @@ class DocBaseViewer extends BaseViewer {
                 this.initThumbnails();
                 this.resize();
             }
+        }
+
+        const { numPages } = this.doc;
+
+        const count = pageNumber > 1 ? 4 : numPages;
+
+        if (pageNumber === 1) {
+            const timeDiff = Date.now() - this.preloader.loadTime;
+            console.log(` Time diff ${timeDiff}`);
+            const el = document.getElementsByClassName('bcs-title')[0];
+
+            el.innerHTML = `Time diff: ${timeDiff / 1000} seconds`;
+            this.emitMetric({
+                name: 'PRELOAD_DOC_LOAD_TIME_DIFF',
+                data: { pagesLoaded: count, timeDifference: timeDiff },
+            });
         }
 
         // Fire rendered metric to indicate that the specific page of content the user requested has been shown
@@ -1682,7 +1709,7 @@ class DocBaseViewer extends BaseViewer {
         const cachedToggledState = this.getCachedThumbnailsToggledState();
         // `pdfViewer.pagesCount` isn't immediately available after pdfViewer.setDocument()
         // is called, but the numPages is available on the underlying pdfViewer.pdfDocument
-        const { numPages = 0 } = this.pdfViewer && this.pdfViewer.pdfDocument;
+        const { numPages = 0 } = this.preloader || (this.pdfViewer && this.pdfViewer.pdfDocument);
         let toggledState = cachedToggledState;
 
         // If cached toggled state is anything other than false, set it to true

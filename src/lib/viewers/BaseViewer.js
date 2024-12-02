@@ -481,6 +481,9 @@ class BaseViewer extends EventEmitter {
      * @return {string} content url
      */
     createContentUrlWithAuthParams(template, asset) {
+        if (!template) {
+            return '';
+        }
         const urlWithAuthParams = this.appendAuthParams(this.createContentUrl(template, asset));
 
         // Append optional query params
@@ -660,7 +663,6 @@ class BaseViewer extends EventEmitter {
      */
     emit(event, data) {
         const { file, viewer } = this.options;
-        console.log(`${event}:${JSON.stringify(data)}`);
         super.emit(event, data);
         super.emit(VIEWER_EVENT.default, {
             event,
