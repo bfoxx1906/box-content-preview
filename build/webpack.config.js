@@ -1,6 +1,6 @@
 const { NODE_ENV } = process.env;
 const isDev = NODE_ENV === 'dev';
-const isProd = NODE_ENV === 'production';
+const isProd = NODE_ENV === 'dev';
 
 const fs = require('fs');
 const get = require('lodash/get');
@@ -27,8 +27,8 @@ if (fs.existsSync('build/rsync.json')) {
 
 const lib = path.resolve('src/lib');
 const thirdParty = path.resolve('src/third-party');
-const staticFolder = path.resolve('dist');
-const languages = isProd ? locales : ['en-US']; // Only 1 language needed for dev
+const staticFolder = path.resolve('cdn01.boxcdn.net/platform/preview');
+const languages = ['en-US']; // Only 1 language needed for dev
 
 /* eslint-disable key-spacing, require-jsdoc */
 function updateConfig(conf, language, index) {
@@ -40,7 +40,7 @@ function updateConfig(conf, language, index) {
             csv: [`${lib}/viewers/text/BoxCSV.js`],
             archive: [`${lib}/viewers/archive/BoxArchive.js`],
         },
-        mode: isProd ? 'production' : 'development',
+        mode: isProd ? 'development' : 'development',
         optimization: {
             minimizer: [
                 new UglifyJsPlugin({
@@ -58,7 +58,7 @@ function updateConfig(conf, language, index) {
         },
         output: {
             filename: '[Name].js',
-            path: path.resolve('dist', version, language),
+            path: path.resolve('cdn01.boxcdn.net/platform/preview', version, language),
         },
         performance: {
             maxAssetSize: 500000,
@@ -81,7 +81,7 @@ function updateConfig(conf, language, index) {
         config.devtool = 'source-map';
 
         if (rsyncLocation) {
-            config.plugins.push(new RsyncPlugin('dist/.', rsyncLocation));
+            config.plugins.push(new RsyncPlugin('cdn01.boxcdn.net/platform/preview/.', rsyncLocation));
         }
 
         if (rsyncApiLocation) {
@@ -95,20 +95,20 @@ function updateConfig(conf, language, index) {
 
             const destination = `${rsyncApiLocation.user}@${get(json, rsyncApiLocation.ip)}:${rsyncApiLocation.path}`;
 
-            config.plugins.push(new ApiRsyncPlugin('dist/.', destination));
+            config.plugins.push(new ApiRsyncPlugin('cdn01.boxcdn.net/platform/preview/.', destination));
         }
     }
 
-    if (isProd) {
-        // Optimize CSS - minimize, remove comments and duplicate rules
-        config.plugins.push(
-            new OptimizeCssAssetsPlugin({
-                cssProcessorOptions: {
-                    safe: true,
-                },
-            }),
-        );
-    }
+    // if (isProd) {
+    //     // Optimize CSS - minimize, remove comments and duplicate rules
+    //     config.plugins.push(
+    //         new OptimizeCssAssetsPlugin({
+    //             cssProcessorOptions: {
+    //                 safe: true,
+    //             },
+    //         }),
+    //     );
+    // }
 
     return config;
 }
