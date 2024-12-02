@@ -63,6 +63,12 @@ class DocPreloader extends EventEmitter {
 
     loadTime;
 
+    firstImage;
+
+    pageCount = 1;
+
+    preloadedImages = {};
+
     /**
      * [constructor]
      *
@@ -116,9 +122,9 @@ class DocPreloader extends EventEmitter {
      * @param {string} preloadUrlWithAuth - URL for preload content with authorization query params
      * @return {Promise} Promise to show preload
      */
-    async showPreload(preloadUrlWithAuth, containerEl, pagedPreLoadUrlWithAuth, pages = 4) {
+    async showPreload(preloadUrlWithAuth, containerEl, pagedPreLoadUrlWithAuth = '', pages, docBaseViewer) {
         this.containerEl = containerEl;
-
+        this.pageCount = pages;
         // Need to load image as a blob to read EXIF
         this.wrapperEl = document.createElement('div');
         this.wrapperEl.className = this.wrapperClassName;
@@ -131,10 +137,12 @@ class DocPreloader extends EventEmitter {
 
         const count = pages > 4 ? 4 : pages;
 
-        for (let i = 2; i <= count; i++) {
-            const url = pagedPreLoadUrlWithAuth.replace('asset_url', `${i}.png`);
-            const promise = this.api.get(url, { type: 'blob' });
-            promises.push(promise.catch(e => e));
+        if (pagedPreLoadUrlWithAuth) {
+            for (let i = 2; i <= count; i++) {
+                const url = pagedPreLoadUrlWithAuth.replace('asset_url', `${i}.png`);
+                const promise = this.api.get(url, { type: 'blob' });
+                promises.push(promise.catch(e => e));
+            }
         }
 
         this.preloadEl = document.createElement('div');
@@ -146,9 +154,12 @@ class DocPreloader extends EventEmitter {
             })
             .then(async data => {
                 this.wrapperEl.appendChild(this.preloadEl);
-                const i = 0;
+                let i = 1;
                 const first = data.shift();
-                let img = await this.loadImage(URL.createObjectURL(first));
+                this.firstImage = URL.createObjectURL(first);
+                this.preloadedImages = {};
+                this.preloadedImages[i] = this.firstImage;
+                let img = await this.loadImage(this.firstImage);
                 let container = this.buildPreloaderImagePlaceHolder(img);
                 await this.imageLoadHandler(img, container);
                 container = this.buildPreloaderImagePlaceHolder(img);
@@ -157,7 +168,9 @@ class DocPreloader extends EventEmitter {
                 this.preloadEl.appendChild(container);
                 data.forEach(element => {
                     if (!(element instanceof Error)) {
+                        i += 1;
                         img = document.createElement('img');
+                        this.preloadedImages[i] = URL.createObjectURL(element);
                         img.src = URL.createObjectURL(element);
                         container = this.buildPreloaderImagePlaceHolder(img);
                         container.setAttribute('num', i);
@@ -165,6 +178,8 @@ class DocPreloader extends EventEmitter {
                         this.preloadEl.appendChild(container);
                     }
                 });
+
+                docBaseViewer.initThumbnails();
                 this.loadTime = Date.now();
                 console.log(`preload complete  ${Date.now()}`);
             });
@@ -312,7 +327,8 @@ class DocPreloader extends EventEmitter {
             .then(pdfData => {
                 this.pdfData = pdfData;
                 const { scaledWidth, scaledHeight } = this.getScaledWidthAndHeight(pdfData);
-                setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
+                // setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
+                this.wrapperEl.style.width = `${scaledWidth}px`;
                 this.imageDimensions = { width: scaledWidth, height: scaledHeight };
                 imageEl.classList.add('loaded');
                 this.numPages = pdfData.numPages;
@@ -321,7 +337,8 @@ class DocPreloader extends EventEmitter {
             .catch(() => {
                 const { naturalWidth: pdfWidth, naturalHeight: pdfHeight } = imageEl;
                 const { scaledWidth, scaledHeight } = this.getScaledDimensions(pdfWidth, pdfHeight);
-                setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
+                // setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
+                this.wrapperEl.style.width = `${scaledWidth}px`;
                 this.imageDimensions = { width: scaledWidth, height: scaledHeight };
                 imageEl.classList.add('loaded');
             });
