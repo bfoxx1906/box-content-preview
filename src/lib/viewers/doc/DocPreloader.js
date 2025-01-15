@@ -135,7 +135,7 @@ class DocPreloader extends EventEmitter {
 
         const promises = [promise1];
 
-        const count = pages > 4 ? 4 : pages;
+        const count = pages > 8 ? 8 : pages;
 
         if (pagedPreLoadUrlWithAuth) {
             for (let i = 2; i <= count; i++) {
@@ -327,7 +327,6 @@ class DocPreloader extends EventEmitter {
             .then(pdfData => {
                 this.pdfData = pdfData;
                 const { scaledWidth, scaledHeight } = this.getScaledWidthAndHeight(pdfData);
-                // setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
                 this.wrapperEl.style.width = `${scaledWidth}px`;
                 this.imageDimensions = { width: scaledWidth, height: scaledHeight };
                 imageEl.classList.add('loaded');
@@ -337,7 +336,6 @@ class DocPreloader extends EventEmitter {
             .catch(() => {
                 const { naturalWidth: pdfWidth, naturalHeight: pdfHeight } = imageEl;
                 const { scaledWidth, scaledHeight } = this.getScaledDimensions(pdfWidth, pdfHeight);
-                // setDimensions(this.wrapperEl, scaledWidth, scaledHeight);
                 this.wrapperEl.style.width = `${scaledWidth}px`;
                 this.imageDimensions = { width: scaledWidth, height: scaledHeight };
                 imageEl.classList.add('loaded');
