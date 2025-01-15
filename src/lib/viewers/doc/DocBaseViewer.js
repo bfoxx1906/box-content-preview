@@ -370,7 +370,7 @@ class DocBaseViewer extends BaseViewer {
         const { url_template: template } = preloadRep.content;
 
         const pagedUrlTemplate = preloadRepPaged?.content?.url_template;
-        const { pages: pageCount = 4 } = preloadRepPaged?.metadata || {};
+        const { pages: pageCount = 1 } = preloadRepPaged?.metadata || {};
         const preloadUrlWithAuth = this.createContentUrlWithAuthParams(template);
         const newPagedUrlTemplate = pagedUrlTemplate?.replace(/\{.*\}/, 'asset_url');
         const pagedPreLoadUrlWithAuth = this.createContentUrlWithAuthParams(newPagedUrlTemplate);
@@ -754,27 +754,6 @@ class DocBaseViewer extends BaseViewer {
                     this.resize();
                 }
                 this.doc = doc;
-                const { numPages } = doc;
-
-                // const count = numPages > 4 ? 4 : numPages;
-
-                // const promises = [];
-                // for (let i = 1; i <= count; i += 1) {
-                //     const promise = this.pdfViewer.pdfDocument.getPage(i);
-                //     promises.push(promise);
-                // }
-                // const { preloader } = this;
-
-                // // Wait until pdfjs has rendered the number of pages the proloader loaded
-                // Promise.all(promises).then(data => {
-                //     const timeDiff = Date.now() - preloader.loadTime;
-                //     console.log(` Time diff ${timeDiff}`);
-                //     window.alert(`Time diff: ${timeDiff/1000} seconds`)
-                //     this.emitMetric({
-                //         name: 'PRELOAD_DOC_LOAD_TIME_DIFF',
-                //         data: { pagesLoaded: count, timeDifference: timeDiff },
-                //     });
-                // });
             })
             .catch(err => {
                 console.error(err); // eslint-disable-line
@@ -892,7 +871,7 @@ class DocBaseViewer extends BaseViewer {
         this.pdfViewer.currentScaleValue = this.pdfViewer.currentScaleValue || 'auto';
         this.pdfViewer.update();
 
-        this.setPage(currentPageNumber);
+        // this.setPage(currentPageNumber);
 
         if (this.thumbnailsSidebar) {
             this.thumbnailsSidebar.resize();
@@ -1313,13 +1292,12 @@ class DocBaseViewer extends BaseViewer {
 
         const { numPages } = this.doc;
 
-        const count = pageNumber > 1 ? 4 : numPages;
+        const count = pageNumber > 1 ? 8 : numPages;
 
         if (pageNumber === 1) {
             const timeDiff = Date.now() - this.preloader.loadTime;
             console.log(` Time diff ${timeDiff}`);
             const el = document.getElementsByClassName('bcs-title')[0];
-
             el.innerHTML = `Time diff: ${timeDiff / 1000} seconds`;
             this.emitMetric({
                 name: 'PRELOAD_DOC_LOAD_TIME_DIFF',
