@@ -92,19 +92,6 @@ class DocPreloader extends EventEmitter {
         return placeHolder;
     }
 
-    async waitForImageDimensions() {
-        await new Promise((resolve, reject) => {
-            const checkCondition = () => {
-                if (this.imageDimensions) {
-                    resolve();
-                } else {
-                    setTimeout(checkCondition, 100);
-                }
-            };
-
-            checkCondition();
-        });
-    }
 
     async loadImage(src) {
         return new Promise((resolve, reject) => {
@@ -216,23 +203,6 @@ class DocPreloader extends EventEmitter {
         this.emit('preload');
     }
 
-    /**
-     * Set scaled dimensions for the preload image and show.
-     *
-     * @param {number} scaledWidth - Width in pixels to scale preload to
-     * @param {number} scaledHeight - Height in pixels to scale preload to
-     * @param {number} numPages - Number of pages to show for preload
-     * @return {void}
-     */
-    newScaleAndShowPreload(scaledWidth, scaledHeight, numPages, imageEl) {
-        if (this.checkDocumentLoaded()) {
-            return;
-        }
-
-        const element = imageEl.getParentElement;
-        // Set initial placeholder dimensions
-        setDimensions(element, scaledWidth, scaledHeight);
-    }
 
     /**
      * Hides the preload if it exists.
