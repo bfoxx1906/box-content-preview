@@ -390,13 +390,8 @@ class DocBaseViewer extends BaseViewer {
         this.rootEl.classList.add(CLASS_BOX_PREVIEW_THUMBNAILS_OPEN);
         this.emit(VIEWER_EVENT.thumbnailsOpen);
         this.resize();
+        this.preloader.showPreload(preloadUrlWithAuth, this.containerEl, pagedPreLoadUrlWithAuth, pageCount, this);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const turnoff = urlParams.get('turnoff');
-
-        if (!turnoff) {
-            this.preloader.showPreload(preloadUrlWithAuth, this.containerEl, pagedPreLoadUrlWithAuth, pageCount, this);
-        }
     }
 
     /**
