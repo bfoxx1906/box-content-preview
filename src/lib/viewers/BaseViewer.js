@@ -39,6 +39,7 @@ import { VIEWER_EVENT, ERROR_CODE, LOAD_METRIC, DOWNLOAD_REACHABILITY_METRICS } 
 import AnnotationControlsFSM, { AnnotationInput, AnnotationMode } from '../AnnotationControlsFSM';
 import AnnotationModule from '../AnnotationModule';
 import PreviewError from '../PreviewError';
+import { isFeatureEnabled } from '../feature-checking';
 import Timer from '../Timer';
 
 const VIEWER_STATUSES = {
@@ -1397,6 +1398,11 @@ class BaseViewer extends EventEmitter {
         }
 
         return addedElement;
+    }
+
+
+    isFeatureEnabled(feature){
+        return isFeatureEnabled(this.options.features, feature)    
     }
 }
 
