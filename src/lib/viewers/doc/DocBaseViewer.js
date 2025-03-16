@@ -1225,12 +1225,6 @@ class DocBaseViewer extends BaseViewer {
      * @return {void}
      */
     initThumbnails() {
-        // if (!this.thumbnailsSidebar) {
-        //     this.thumbnailsSidebar = new ThumbnailsSidebar(this.thumbnailsSidebarEl, this.pdfViewer, this.preloader);
-        // } else {
-        //     this.thumbnailsSidebar.pdfViewer = this.pdfViewer;
-        // }
-
         this.thumbnailsSidebar = new ThumbnailsSidebar(this.thumbnailsSidebarEl, this.pdfViewer, this.preloader);
 
         this.thumbnailsSidebar.init({
