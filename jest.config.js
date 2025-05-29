@@ -1,12 +1,37 @@
 module.exports = {
     clearMocks: true,
-    collectCoverage: false,
+    collectCoverage: true,
+    coveragePathIgnorePatterns: [
+        '/node_modules/',
+        '/dist/',
+        '/src/lib/polyfill.js',
+        '/src/third-party/',
+        '/build/',
+        '/coverage/',
+        '/__mocks__/',
+        '/.storybook/',
+        '/src/lib/types/',
+        '/src/lib/__tests__/',
+    ],
+    collectCoverageFrom: [
+        'src/lib/**/*.{js,jsx,ts,tsx}',
+        '!**/*-test.*',
+        '!src/lib/browser.js',
+        '!src/third-party/**',
+        '!src/lib/viewers/box3d/model3d/Model3DAnimationClipsPullup.js',
+        '!src/lib/viewers/box3d/model3d/model3DSettingsPullup.js',
+        '!src/lib/viewers/box3d/model3d/Model3DVrControls.js',
+        '!src/lib/viewers/box3d/**/SceneEntities.js',
+        '!src/lib/viewers/box3d/**Constants.js',
+    ],
+
     globals: {
         __NAME__: 'name',
         __VERSION__: 'version',
         __LANGUAGE__: 'en-US',
     },
     moduleFileExtensions: ['js', 'jsx', 'json', 'ts', 'tsx'],
+
     moduleNameMapper: {
         '\\.(css|scss|less)$': '<rootDir>/build/jest/styleMock.js',
         '\\.(jpg|jpeg|png|gif|eot|otf|webp|ttf|woff|woff2)$': '<rootDir>/build/jest/fileMock.js',
