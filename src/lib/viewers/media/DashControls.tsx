@@ -10,6 +10,11 @@ import VolumeControls, { Props as VolumeControlsProps } from '../controls/media/
 import { SUBTITLES_OFF } from '../../constants';
 import './DashControls.scss';
 
+import DrawingControls from '../controls/annotations/DrawingControls';
+import { AnnotationMode } from '../../types/annotations';
+import AnnotationsControls from '../controls/annotations';
+import PictureInPictureToggle from '../controls/media/PictureInPictureToggle';
+
 export type Props = DurationLabelsProps &
     MediaFullscreenToggleProps &
     MediaSettingsProps &
@@ -18,6 +23,13 @@ export type Props = DurationLabelsProps &
     TimeControlsProps &
     VolumeControlsProps & {
         isPlayingHD?: boolean;
+        annotationColor?: string | undefined;
+        annotationMode?: AnnotationMode | undefined;
+        onAnnotationColorChange?: (color: string) => void | undefined;
+        onAnnotationModeClick?: ({ mode }: { mode: AnnotationMode }) => void;
+        onAnnotationModeEscape?: () => void;
+        onPictureInPictureToggle?: (isActive: boolean) => void;
+        videoElement?: HTMLVideoElement | null;
     };
 
 export default function DashControls({
@@ -50,6 +62,15 @@ export default function DashControls({
     subtitle,
     subtitles = [],
     volume,
+    annotationColor,
+    annotationMode,
+    onAnnotationColorChange = (color: string) => {
+        /* noop */
+    },
+    onAnnotationModeClick,
+    onAnnotationModeEscape,
+    onPictureInPictureToggle,
+    videoElement,
 }: Props): JSX.Element {
     return (
         <div className="bp-DashControls" data-testid="media-controls-wrapper">
@@ -68,6 +89,22 @@ export default function DashControls({
                     <PlayPauseToggle isPlaying={isPlaying} onPlayPause={onPlayPause} />
                     <VolumeControls onMuteChange={onMuteChange} onVolumeChange={onVolumeChange} volume={volume} />
                     <DurationLabels currentTime={currentTime} durationTime={durationTime} />
+                    <PictureInPictureToggle
+                        onPictureInPictureToggle={onPictureInPictureToggle}
+                        videoElement={videoElement}
+                    />
+                </div>
+
+                <div className="bp-DashControls-group">
+                    <AnnotationsControls
+                        annotationColor={annotationColor}
+                        annotationMode={annotationMode}
+                        hasDrawing
+                        hasHighlight
+                        hasRegion
+                        onAnnotationModeClick={onAnnotationModeClick}
+                        onAnnotationModeEscape={onAnnotationModeEscape}
+                    />
                 </div>
 
                 <div className="bp-DashControls-group">

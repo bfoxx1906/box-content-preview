@@ -38,6 +38,7 @@ export default function MP4Controls({
                 durationTime={durationTime}
                 onTimeChange={onTimeChange}
             />
+            <div>asdfasdfasdf</div>
 
             <div className="bp-MP4Controls-bar">
                 <div className="bp-MP4Controls-group">

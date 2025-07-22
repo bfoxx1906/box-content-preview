@@ -3,6 +3,8 @@ import DashControls from './DashControls';
 import fullscreen from '../../Fullscreen';
 import getLanguageName from '../../lang';
 import PreviewError from '../../PreviewError';
+import AnnotationControlsFSM, { AnnotationInput, AnnotationMode, AnnotationState } from '../../AnnotationControlsFSM';
+
 import Timer from '../../Timer';
 import VideoBaseViewer from './VideoBaseViewer';
 import { appendQueryParams, getProp } from '../../util';
@@ -49,14 +51,18 @@ class DashViewer extends VideoBaseViewer {
     /** @property {Array<Object>} - Array of text tracks for the video */
     textTracks = [];
 
+    useReactControls = false;
+
     /**
      * @inheritdoc
      */
     constructor(options) {
         super(options);
 
+        this.useReactControls = true; // this.getViewerOption('useReactControls')
         this.api = options.api;
         // Bind context for callbacks
+        this.loadBoxAnnotations().then(this.createAnnotator);
         this.adaptationHandler = this.adaptationHandler.bind(this);
         this.getBandwidthInterval = this.getBandwidthInterval.bind(this);
         this.handleAudioTrack = this.handleAudioTrack.bind(this);
@@ -71,6 +77,22 @@ class DashViewer extends VideoBaseViewer {
         this.setSubtitle = this.setSubtitle.bind(this);
         this.shakaErrorHandler = this.shakaErrorHandler.bind(this);
         this.toggleSubtitles = this.toggleSubtitles.bind(this);
+        this.handleAnnotationControlsClick = this.handleAnnotationControlsClick.bind(this);
+
+        this.annotationControlsFSM = new AnnotationControlsFSM(
+            this.isDiscoverabilityEnabled() ? AnnotationState.DRAWING : AnnotationState.NONE,
+        );
+
+        // this.annotationControlsFSM.subscribe(this.applyCursorFtux);
+        // this.annotationControlsFSM.subscribe(this.updateDiscoverabilityResinTag);
+    }
+
+    areAnnotationsEnabled() {
+        return true;
+    }
+
+    isDiscoverabilityEnabled() {
+        return true;
     }
 
     /**
@@ -463,7 +485,7 @@ class DashViewer extends VideoBaseViewer {
                 break;
         }
 
-        if (!this.getViewerOption('useReactControls')) {
+        if (!this.useReactControls) {
             this.showGearHdIcon(this.getActiveTrack());
         }
 
@@ -508,7 +530,7 @@ class DashViewer extends VideoBaseViewer {
     adaptationHandler() {
         const activeTrack = this.getActiveTrack();
 
-        if (!this.getViewerOption('useReactControls')) {
+        if (!this.useReactControls) {
             this.showGearHdIcon(activeTrack);
         }
 
@@ -520,7 +542,7 @@ class DashViewer extends VideoBaseViewer {
         }
         this.hideLoadingIcon();
 
-        if (this.getViewerOption('useReactControls')) {
+        if (this.useReactControls) {
             this.renderUI();
         }
     }
@@ -604,6 +626,14 @@ class DashViewer extends VideoBaseViewer {
         this.mediaControls.addListener('audiochange', this.handleAudioTrack);
     }
 
+    initAnnotations() {
+        super.initAnnotations();
+
+        if (this.areNewAnnotationsEnabled()) {
+            this.annotator.addListener('annotations_create', this.handleAnnotationCreateEvent);
+        }
+    }
+
     /**
      * Loads captions/subtitles into the settings menu
      *
@@ -614,7 +644,7 @@ class DashViewer extends VideoBaseViewer {
         this.textTracks = this.player.getTextTracks().sort((track1, track2) => track1.id - track2.id);
 
         if (this.textTracks.length > 0) {
-            if (this.getViewerOption('useReactControls')) {
+            if (this.useReactControls) {
                 this.initSubtitles();
             } else {
                 this.mediaControls.initSubtitles(
@@ -699,7 +729,7 @@ class DashViewer extends VideoBaseViewer {
         } else {
             this.setupAutoCaptionDisplayer(textCues);
 
-            if (this.getViewerOption('useReactControls')) {
+            if (this.useReactControls) {
                 this.textTracks = [{ id: 0, language: __('auto_generated') }];
                 this.initSubtitles();
             } else {
@@ -772,7 +802,7 @@ class DashViewer extends VideoBaseViewer {
             const languages = this.audioTracks.map(track => getLanguageName(track.language) || track.language);
             this.selectedAudioTrack = this.audioTracks[0].id;
 
-            if (!this.getViewerOption('useReactControls')) {
+            if (!this.useReactControls) {
                 this.mediaControls.initAlternateAudio(languages);
             }
         }
@@ -791,7 +821,8 @@ class DashViewer extends VideoBaseViewer {
         }
 
         this.calculateVideoDimensions();
-        if (this.getViewerOption('useReactControls')) {
+        if (this.useReactControls) {
+            this.annotationControlsFSM.subscribe(() => this.loadUIReact());
             this.loadUIReact();
         } else {
             this.loadUI();
@@ -816,7 +847,7 @@ class DashViewer extends VideoBaseViewer {
         this.showMedia();
 
         // Show controls briefly after content loads
-        if (this.getViewerOption('useReactControls')) {
+        if (this.useReactControls) {
             if (this.controls) {
                 this.showAndHideReactControls();
             }
@@ -868,7 +899,7 @@ class DashViewer extends VideoBaseViewer {
             this.filmstripStatus = this.getRepStatus(filmstrip);
             this.filmstripUrl = url;
 
-            if (this.getViewerOption('useReactControls')) {
+            if (this.useReactControls) {
                 this.filmstripStatus.getPromise().then(() => {
                     this.renderUI(); // Render once the filmstrip is ready
                 });
@@ -1153,6 +1184,12 @@ class DashViewer extends VideoBaseViewer {
         this.setSubtitle(showSubtitles ? this.selectedSubtitle : SUBTITLES_OFF);
     }
 
+    handleAnnotationControlsClick({ mode }) {
+        const nextMode = this.annotationControlsFSM.transition(AnnotationInput.CLICK, mode);
+        this.annotator.toggleAnnotationMode(nextMode);
+        this.processAnnotationModeChange(nextMode);
+    }
+
     /**
      * @inheritdoc
      */
@@ -1160,12 +1197,15 @@ class DashViewer extends VideoBaseViewer {
         // Extra guard for `render` is needed because Video360Viewer extends DashViewer
         // and creates and assigns the 360 control to this.controls which usually has
         // been reserved for new React controls
+
         if (!this.controls || !this.controls.render) {
             return;
         }
 
         this.controls.render(
             <DashControls
+                annotationColor={this.annotationModule.getColor()}
+                annotationMode={this.annotationControlsFSM.getMode()}
                 aspectRatio={this.aspect}
                 audioTrack={this.selectedAudioTrack}
                 audioTracks={this.audioTracks}
@@ -1179,6 +1219,7 @@ class DashViewer extends VideoBaseViewer {
                 isHDSupported={this.hdVideoId !== -1}
                 isPlaying={!this.mediaEl.paused}
                 isPlayingHD={this.isPlayingHD()}
+                onAnnotationModeClick={this.handleAnnotationControlsClick}
                 onAudioTrackChange={this.setAudioTrack}
                 onAutoplayChange={this.setAutoplay}
                 onFullscreenToggle={this.toggleFullscreen}
@@ -1194,6 +1235,7 @@ class DashViewer extends VideoBaseViewer {
                 rate={this.getRate()}
                 subtitle={this.getSubtitleId()}
                 subtitles={this.textTracks}
+                videoElement={this.mediaEl}
                 volume={this.mediaEl.volume}
             />,
         );

@@ -1012,6 +1012,26 @@ class BaseViewer extends EventEmitter {
         this.annotatorConf = boxAnnotations.determineAnnotator(this.options, this.viewerConfig);
 
         if (!this.annotatorConf) {
+            this.annotatorConf = {
+                NAME: 'Image',
+                VIEWER: ['Image', 'MultiImage'],
+                TYPE: ['point'],
+                DEFAULT_TYPES: ['point'],
+                CONTROLLERS: {
+                    point: {
+                        _events: {},
+                        threads: {},
+                        handlers: [],
+                    },
+                },
+            };
+        }
+
+        if (this.annotatorConf.CONSTRUCTOR === global.BoxAnnotations) {
+            return;
+        }
+
+        if (!this.annotatorConf) {
             return;
         }
 
