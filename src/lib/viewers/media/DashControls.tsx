@@ -14,6 +14,8 @@ import './DashControls.scss';
 import AnnotationsControls from '../controls/annotations/AnnotationsControls';
 import { AnnotationMode } from '../../types/annotations';
 
+import DrawingControls from '../controls/annotations/DrawingControls';
+
 export type Props = DurationLabelsProps &
     MediaFullscreenToggleProps &
     MediaSettingsProps &
@@ -27,6 +29,9 @@ export type Props = DurationLabelsProps &
         onAnnotationModeClick?: ({ mode }: { mode: AnnotationMode }) => void;
         onAnnotationModeEscape?: () => void;
         videoAnnotationsEnabled?: boolean;
+        onAnnotationColorChange?: (color: string) => void | undefined;
+        onPictureInPictureToggle?: (isActive: boolean) => void;
+        videoElement?: HTMLVideoElement | null;
     };
 
 export default function DashControls({
@@ -64,6 +69,10 @@ export default function DashControls({
     onAnnotationModeClick,
     onAnnotationModeEscape,
     videoAnnotationsEnabled = false,
+    onAnnotationColorChange = (color: string) => {
+        /* noop */
+    },
+    videoElement,
 }: Props): JSX.Element {
     return (
         <div
