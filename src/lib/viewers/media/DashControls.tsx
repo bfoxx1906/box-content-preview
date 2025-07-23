@@ -30,7 +30,6 @@ export type Props = DurationLabelsProps &
         onAnnotationModeEscape?: () => void;
         videoAnnotationsEnabled?: boolean;
         onAnnotationColorChange?: (color: string) => void | undefined;
-        onPictureInPictureToggle?: (isActive: boolean) => void;
         videoElement?: HTMLVideoElement | null;
     };
 

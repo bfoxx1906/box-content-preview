@@ -62,7 +62,7 @@ class DashViewer extends VideoBaseViewer {
         this.useReactControls = true; // this.getViewerOption('useReactControls')
         this.api = options.api;
         // Bind context for callbacks
-        this.loadBoxAnnotations().then(this.createAnnotator);
+        // this.loadBoxAnnotations().then(this.createAnnotator);
         this.adaptationHandler = this.adaptationHandler.bind(this);
         this.getBandwidthInterval = this.getBandwidthInterval.bind(this);
         this.handleAudioTrack = this.handleAudioTrack.bind(this);
@@ -85,10 +85,6 @@ class DashViewer extends VideoBaseViewer {
 
         // this.annotationControlsFSM.subscribe(this.applyCursorFtux);
         // this.annotationControlsFSM.subscribe(this.updateDiscoverabilityResinTag);
-    }
-
-    areAnnotationsEnabled() {
-        return true;
     }
 
     isDiscoverabilityEnabled() {
@@ -173,6 +169,7 @@ class DashViewer extends VideoBaseViewer {
         return Promise.all([this.loadAssets(this.getJSAssets()), this.getRepStatus().getPromise()])
             .then(() => {
                 this.loadDashPlayer();
+                this.handleAssetAndRepLoad();
                 this.resetLoadTimeout();
             })
             .catch(this.handleAssetError);
@@ -220,6 +217,7 @@ class DashViewer extends VideoBaseViewer {
         // Polyfill
         shaka.polyfill.installAll();
         this.adapting = true;
+        window.video = this.mediaEl;
         this.player = new shaka.Player(this.mediaEl);
         this.player.addEventListener('adaptation', this.adaptationHandler);
         this.player.addEventListener('error', this.shakaErrorHandler);
@@ -702,6 +700,16 @@ class DashViewer extends VideoBaseViewer {
         this.selectedSubtitle = (clientTextTrack || englishTextTrack || defaultTextTrack).id;
 
         this.setSubtitle(this.getSubtitleId());
+    }
+
+
+
+    saveVideoFrame() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.mediaEl.videoWidth;
+        canvas.height = this.mediaEl.videoHeight;
+        canvas.getContext('2d').drawImage(this.mediaEl, 0, 0);
+        return canvas.toDataURL('image/png');
     }
 
     /**
@@ -1196,6 +1204,7 @@ class DashViewer extends VideoBaseViewer {
 
     handleAnnotationControlsClick({ mode }) {
         const nextMode = this.annotationControlsFSM.transition(AnnotationInput.CLICK, mode);
+        this.mediaEl.pause();
         this.annotator.toggleAnnotationMode(nextMode);
         this.processAnnotationModeChange(nextMode);
     }
@@ -1230,6 +1239,7 @@ class DashViewer extends VideoBaseViewer {
                 isPlaying={!this.mediaEl.paused}
                 isPlayingHD={this.isPlayingHD()}
                 onAnnotationModeClick={this.handleAnnotationControlsClick}
+                onAnnotationModeEscape={this.handleAnnotationControlsEscape}
                 onAudioTrackChange={this.setAudioTrack}
                 onAutoplayChange={this.setAutoplay}
                 onFullscreenToggle={this.toggleFullscreen}

@@ -1011,22 +1011,6 @@ class BaseViewer extends EventEmitter {
         const boxAnnotations = this.options.boxAnnotations || new global.BoxAnnotations(viewerOptions);
         this.annotatorConf = boxAnnotations.determineAnnotator(this.options, this.viewerConfig);
 
-        if (!this.annotatorConf) {
-            this.annotatorConf = {
-                NAME: 'Image',
-                VIEWER: ['Image', 'MultiImage'],
-                TYPE: ['point'],
-                DEFAULT_TYPES: ['point'],
-                CONTROLLERS: {
-                    point: {
-                        _events: {},
-                        threads: {},
-                        handlers: [],
-                    },
-                },
-            };
-        }
-
         if (this.annotatorConf.CONSTRUCTOR === global.BoxAnnotations) {
             return;
         }
@@ -1104,6 +1088,7 @@ class BaseViewer extends EventEmitter {
 
         return !!(
             permissions.can_annotate ||
+            permissions.can_comment ||
             permissions.can_create_annotations ||
             permissions.can_view_annotations ||
             permissions.can_view_annotations_all ||
@@ -1258,6 +1243,9 @@ class BaseViewer extends EventEmitter {
         const { showAnnotationsControls, file } = this.options;
         const { permissions, extension } = file || {};
 
+        if (file) {
+            return true;
+        }
         if (!this.hasAnnotationCreatePermission(permissions) && !this.hasAnnotationViewPermission(permissions)) {
             return false;
         }
