@@ -14,6 +14,7 @@ import DrawingControls from '../controls/annotations/DrawingControls';
 import { AnnotationMode } from '../../types/annotations';
 import AnnotationsControls from '../controls/annotations';
 import PictureInPictureToggle from '../controls/media/PictureInPictureToggle';
+import SaveVideoFrameButton from '../controls/media/SaveVideFrameButton';
 
 export type Props = DurationLabelsProps &
     MediaFullscreenToggleProps &
@@ -93,6 +94,7 @@ export default function DashControls({
                         onPictureInPictureToggle={onPictureInPictureToggle}
                         videoElement={videoElement}
                     />
+                    <SaveVideoFrameButton videoElement={videoElement} />
                 </div>
 
                 <div className="bp-DashControls-group">
@@ -100,7 +102,6 @@ export default function DashControls({
                         annotationColor={annotationColor}
                         annotationMode={annotationMode}
                         hasDrawing
-                        hasHighlight
                         hasRegion
                         onAnnotationModeClick={onAnnotationModeClick}
                         onAnnotationModeEscape={onAnnotationModeEscape}
