@@ -702,8 +702,6 @@ class DashViewer extends VideoBaseViewer {
         this.setSubtitle(this.getSubtitleId());
     }
 
-
-
     saveVideoFrame() {
         const canvas = document.createElement('canvas');
         canvas.width = this.mediaEl.videoWidth;

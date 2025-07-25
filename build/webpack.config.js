@@ -1,6 +1,7 @@
-const { NODE_ENV } = process.env;
+const { NODE_ENV, BROWSER_OVERRIDE } = process.env;
 const isDev = NODE_ENV === 'dev';
 const isProd = NODE_ENV === 'production';
+const isBrowserOverride = BROWSER_OVERRIDE === 'true';
 
 const fs = require('fs');
 const get = require('lodash/get');
@@ -13,13 +14,29 @@ const { execSync } = require('child_process');
 const commonConfig = require('./webpack.common.config');
 const RsyncPlugin = require('./RsyncPlugin');
 const ApiRsyncPlugin = require('./ApiRsyncPlugin');
-const version = isProd ? require('../package.json').version : 'dev';
 
+let version = '';
+if (isBrowserOverride) {
+    /* eslint-disable */
+    version = process.env.BROWSER_OVERRIDE_VERSION || require('../package.json').version;
+    console.log('version', process.env.BROWSER_OVERRIDE_VERSION);
+    /* eslint-disable */
+} else if (isProd) {
+    /* eslint-disable */
+    version = require('../package.json').version;
+    /* eslint-disable */
+} else {
+    version = 'dev';
+}
+
+console.log(version);
 let rsyncLocation = '';
 let rsyncApiLocation = null;
+console.log('fs.existsSync', fs.existsSync('build/rsync.json'));
 if (fs.existsSync('build/rsync.json')) {
     /* eslint-disable */
     const rsyncConf = require('./rsync.json');
+    console.log('rsyncConf', JSON.stringify(rsyncConf));
     rsyncLocation = rsyncConf.location;
     rsyncApiLocation = rsyncConf.apiLocation;
     /* eslint-enable */
@@ -27,7 +44,8 @@ if (fs.existsSync('build/rsync.json')) {
 
 const lib = path.resolve('src/lib');
 const thirdParty = path.resolve('src/third-party');
-const staticFolder = path.resolve('dist');
+const assetsFolder = isBrowserOverride ? 'cdn01.boxcdn.net/platform/preview' : 'dist';
+const staticFolder = path.resolve(assetsFolder);
 const languages = isProd ? locales : ['en-US']; // Only 1 language needed for dev
 
 /* eslint-disable key-spacing, require-jsdoc */
@@ -58,7 +76,7 @@ function updateConfig(conf, language, index) {
         },
         output: {
             filename: '[Name].js',
-            path: path.resolve('dist', version, language),
+            path: path.resolve(assetsFolder, version, language),
         },
         performance: {
             maxAssetSize: 500000,
@@ -80,11 +98,13 @@ function updateConfig(conf, language, index) {
     if (isDev) {
         config.devtool = 'source-map';
 
-        if (rsyncLocation) {
-            config.plugins.push(new RsyncPlugin('dist/.', rsyncLocation));
+        if (rsyncLocation && !isBrowserOverride) {
+            config.plugins.push(new RsyncPlugin(`${assetsFolder}/.`, rsyncLocation));
         }
-
-        if (rsyncApiLocation) {
+        console.log('rsyncApiLocation', rsyncApiLocation);
+        console.log('isBrowserOverride', isBrowserOverride);
+        console.log('assetsFolder', assetsFolder);
+        if (rsyncApiLocation && !isBrowserOverride) {
             const serverResponse = execSync(
                 `curl -sk -H "Content-Type: application/json"  --connect-timeout 1 ${rsyncApiLocation.url}`,
             )
@@ -92,10 +112,11 @@ function updateConfig(conf, language, index) {
                 .replace('\n', '');
 
             const json = JSON.parse(serverResponse);
+            console.log('json', json);
 
             const destination = `${rsyncApiLocation.user}@${get(json, rsyncApiLocation.ip)}:${rsyncApiLocation.path}`;
 
-            config.plugins.push(new ApiRsyncPlugin('dist/.', destination));
+            config.plugins.push(new ApiRsyncPlugin(`${assetsFolder}/.`, destination));
         }
     }
 
