@@ -693,7 +693,7 @@ class Preview extends EventEmitter {
      */
     prefetchViewers(viewerNames = []) {
         this.getViewers()
-            .filter(viewer => viewerNames.indexOf(viewer.NAME) !== -1)
+            .filter(viewer => viewerNames.includes(viewer.NAME))
             .forEach(viewer => {
                 const viewerInstance = new viewer.CONSTRUCTOR(
                     this.createViewerOptions({
@@ -707,6 +707,29 @@ class Preview extends EventEmitter {
                         preload: false,
                         content: false,
                     });
+                }
+            });
+    }
+
+    /**
+     * Prefetches static viewer assets for the specified viewers.
+     *
+     * @public
+     * @param {string[]} [viewerNames] - Names of viewers to load assets for, defaults to none
+     * @return {void}
+     */
+    loadViewers(viewerNames = []) {
+        this.getViewers()
+            .filter(viewer => viewerNames.includes(viewer.NAME))
+            .forEach(viewer => {
+                const viewerInstance = new viewer.CONSTRUCTOR(
+                    this.createViewerOptions({
+                        viewer,
+                    }),
+                );
+
+                if (typeof viewerInstance.loadViewerAssets === 'function') {
+                    viewerInstance.loadViewerAssets();
                 }
             });
     }
@@ -1676,12 +1699,15 @@ class Preview extends EventEmitter {
         this.emit(name, {
             ...payload,
             content_type: getProp(this.viewer, 'options.viewer.NAME', ''),
+            current_page_number: getProp(this.viewer, 'pdfViewer.currentPageNumber', ''),
             extension: file.extension || '',
             file_id: getProp(file, 'id', ''),
+            file_size: getProp(file, 'size', ''),
             file_version_id: getProp(file, 'file_version.id', ''),
             locale: getProp(this.location, 'locale', ''),
             rep_type: getProp(this.viewer, 'options.representation.representation', '').toLowerCase(),
             timestamp: getISOTime(),
+            total_pages: getProp(this.viewer, 'pdfViewer.pdfDocument.numPages', ''),
             ...getClientLogDetails(),
         });
     }
