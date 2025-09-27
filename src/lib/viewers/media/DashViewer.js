@@ -5,7 +5,7 @@ import { getRepresentation } from '../../file';
 import fullscreen from '../../Fullscreen';
 import getLanguageName from '../../lang';
 import PreviewError from '../../PreviewError';
-import AnnotationControlsFSM, { AnnotationInput, AnnotationMode, AnnotationState } from '../../AnnotationControlsFSM';
+import AnnotationControlsFSM, { AnnotationInput, AnnotationState } from '../../AnnotationControlsFSM';
 
 import Timer from '../../Timer';
 import { appendQueryParams, getProp } from '../../util';
@@ -59,7 +59,6 @@ class DashViewer extends VideoBaseViewer {
     constructor(options) {
         super(options);
 
-        this.useReactControls = true; // this.getViewerOption('useReactControls')
         this.api = options.api;
         // Bind context for callbacks
         // this.loadBoxAnnotations().then(this.createAnnotator);
@@ -702,14 +701,6 @@ class DashViewer extends VideoBaseViewer {
         this.setSubtitle(this.getSubtitleId());
     }
 
-    saveVideoFrame() {
-        const canvas = document.createElement('canvas');
-        canvas.width = this.mediaEl.videoWidth;
-        canvas.height = this.mediaEl.videoHeight;
-        canvas.getContext('2d').drawImage(this.mediaEl, 0, 0);
-        return canvas.toDataURL('image/png');
-    }
-
     /**
      * Loads auto-generated captions from skills using a shaka SimpleTextDisplayer
      * @TODO 07-07-18: Support both auto-generated captions and subtitles from videos
@@ -1214,7 +1205,6 @@ class DashViewer extends VideoBaseViewer {
         // Extra guard for `render` is needed because Video360Viewer extends DashViewer
         // and creates and assigns the 360 control to this.controls which usually has
         // been reserved for new React controls
-
         if (!this.controls || !this.controls.render) {
             return;
         }

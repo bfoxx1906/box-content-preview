@@ -1088,7 +1088,6 @@ class BaseViewer extends EventEmitter {
 
         return !!(
             permissions.can_annotate ||
-            permissions.can_comment ||
             permissions.can_create_annotations ||
             permissions.can_view_annotations ||
             permissions.can_view_annotations_all ||
@@ -1243,9 +1242,6 @@ class BaseViewer extends EventEmitter {
         const { showAnnotationsControls, file } = this.options;
         const { permissions, extension } = file || {};
 
-        if (file) {
-            return true;
-        }
         if (!this.hasAnnotationCreatePermission(permissions) && !this.hasAnnotationViewPermission(permissions)) {
             return false;
         }
