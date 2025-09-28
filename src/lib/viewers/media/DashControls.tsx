@@ -100,8 +100,8 @@ export default function DashControls({
                         <AnnotationsControls
                             annotationColor={annotationColor}
                             annotationMode={annotationMode}
-                            hasDrawing
-                            hasRegion
+                            hasDrawing={hasDrawing}
+                            hasRegion={hasRegion}
                             onAnnotationModeClick={onAnnotationModeClick}
                             onAnnotationModeEscape={onAnnotationModeEscape}
                         />
