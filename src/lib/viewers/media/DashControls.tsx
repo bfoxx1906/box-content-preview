@@ -22,7 +22,7 @@ export type Props = DurationLabelsProps &
     TimeControlsProps &
     VolumeControlsProps & {
         isPlayingHD?: boolean;
-        movePlayback: (forward: boolean, duration: number) => void;
+        movePlayback: (isForward: boolean, duration: number) => void;
         annotationColor?: string;
         annotationMode?: AnnotationMode;
         onAnnotationModeClick?: ({ mode }: { mode: AnnotationMode }) => void;
@@ -67,7 +67,6 @@ export default function DashControls({
     onAnnotationModeEscape,
     videoAnnotationsEnabled = false,
 }: Props): JSX.Element {
-    const hasRegion = videoAnnotationsEnabled;
     return (
         <div
             className={classNames('bp-DashControls')}
@@ -102,7 +101,7 @@ export default function DashControls({
                         />
                     )}
                 </div>
-                <div className="bp-DashControls-group">
+                <div className="bp-DashControls-group bp-DashControls-group--play-pause">
                     <PlayPauseToggle isPlaying={isPlaying} movePlayback={movePlayback} onPlayPause={onPlayPause} />
                 </div>
 
